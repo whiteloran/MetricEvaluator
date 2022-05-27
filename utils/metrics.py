@@ -43,11 +43,24 @@ def ring2cycle(mask_ring):
 
 
 
-def dim3_4(logits,targets):
-    if len(logits.shape) == 3:
-        logits = logits.unsqueeze(1)
-    if len(targets.shape) == 3:
-        targets = targets.unsqueeze(1)
+def dim3_4(logits,targets,class_num):
+    if class_num != 1:
+        if len(logits.shape) <= 3:
+            logits = logits.unsqueeze(1)
+        if len(targets.shape) <= 3:
+            targets = targets.unsqueeze(1)
+    elif class_num == 1:
+        if len(logits.shape) <= 3:
+            logits = logits.unsqueeze(0)
+        if len(targets.shape) <= 3:
+            targets = targets.unsqueeze(0)
+    return logits, targets
+
+def dim2_3(logits,targets):
+    if len(logits.shape) <= 2:
+        logits = logits.unsqueeze(0)
+    if len(targets.shape) <= 2:
+        targets = targets.unsqueeze(0)
     return logits, targets
 
 def dim3_4_1(tens):
@@ -84,21 +97,25 @@ class DiceAverage(object):
         self.count = 0
         self.std = 0
 
-    def update(self, logits, targets):
-        self.value = DiceAverage.get_dices(logits, targets)
+    def update(self, logits, targets, class_num):
+        self.value = DiceAverage.get_dices(self,logits=logits, targets=targets,class_num = class_num)
         self.sum += self.value
         self.count += 1
         self.avg = np.around(self.sum / self.count, 4)
         # print(self.value)
 
     @staticmethod
-    def get_dices(logits, targets):
+    def get_dices(self, logits, targets, class_num):
         dices = []
         smooth = 1e-5
         logits = torch.squeeze(logits)
         targets = torch.squeeze(targets)
         
-        logits,targets = dim3_4(logits,targets)
+        logits,targets = dim2_3(logits,targets)
+        logits,targets = dim3_4(logits,targets,class_num)
+
+        #print(logits.shape)
+        #print(targets.shape)
         
         for class_index in range(targets.size()[0]):
   
@@ -123,21 +140,22 @@ class IouAverage(object):
         self.sum = np.asarray([0]*self.class_num, dtype='float64')
         self.count = 0
 
-    def update(self, logits, targets):
-        self.value = IouAverage.get_ious(logits, targets)
+    def update(self, logits, targets, class_num):
+        self.value = IouAverage.get_ious(logits, targets, class_num)
         self.sum += self.value
         self.count += 1
         self.avg = np.around(self.sum / self.count, 4)
 
 
     @staticmethod
-    def get_ious(logits, targets):
+    def get_ious(logits, targets, class_num):
         ious = []
         smooth = 1e-5
         logits = torch.squeeze(logits)
         targets = torch.squeeze(targets)
 
-        logits,targets = dim3_4(logits, targets)
+        logits,targets = dim2_3(logits,targets)
+        logits,targets = dim3_4(logits, targets, class_num)
     
         for class_index in range(targets.size()[0]):
 
@@ -160,22 +178,23 @@ class HDAverage(object):
         self.sum = np.asarray([0]*self.class_num, dtype='float64')
         self.count = 0
 
-    def update(self, logits, targets):
-        self.value = HDAverage.get_hds(logits, targets)
+    def update(self, logits, targets, class_num):
+        self.value = HDAverage.get_hds(logits, targets, class_num)
         self.sum += self.value
         self.count += 1
         self.avg = np.around(self.sum / self.count, 4)
         # print(self.value)
 
     @staticmethod
-    def get_hds(logits, targets):
+    def get_hds(logits, targets, class_num):
         hds = []
         dhs = []
         smooth = 1e-5
         logits = torch.squeeze(logits)
         targets = torch.squeeze(targets)
 
-        logits,targets = dim3_4(logits, targets)
+        logits,targets = dim2_3(logits,targets)
+        logits,targets = dim3_4(logits, targets, class_num)
 
         for class_index in range(targets.size()[0]):
     
@@ -205,22 +224,23 @@ class RMSEAverage(object):
         self.sum = np.asarray([0]*self.class_num, dtype='float64')
         self.count = 0
 
-    def update(self, logits, targets):
-        self.value = RMSEAverage.get_rmses(logits, targets)
+    def update(self, logits, targets, class_num):
+        self.value = RMSEAverage.get_rmses(logits, targets, class_num)
         self.sum += self.value
         self.count += 1
         self.avg = np.around(self.sum / self.count, 4)
 
 
     @staticmethod
-    def get_rmses(logits, targets):
+    def get_rmses(logits, targets, class_num):
         rmses = []
         mses = []
         smooth = 1e-5
         logits = torch.squeeze(logits)
         targets = torch.squeeze(targets)
 
-        logits,targets = dim3_4(logits, targets)
+        logits,targets = dim2_3(logits, targets)
+        logits,targets = dim3_4(logits, targets, class_num)
 
         for class_index in range(targets.size()[0]):
         
@@ -248,21 +268,22 @@ class RVDAverage(object):
         self.sum = np.asarray([0] * self.class_num, dtype='float64')
         self.count = 0
 
-    def update(self, logits, targets):
-        self.value = RVDAverage.get_rvds(logits, targets)
+    def update(self, logits, targets, class_num):
+        self.value = RVDAverage.get_rvds(logits, targets, class_num)
         self.sum += self.value
         self.count += 1
         self.avg = np.around(self.sum / self.count, 4)
 
     @staticmethod
-    def get_rvds(logits, targets):
+    def get_rvds(logits, targets, class_num):
         rvds = []
         smooth = 1e-5
 
         logits = torch.squeeze(logits)
         targets = torch.squeeze(targets)
 
-        logits,targets = dim3_4(logits, targets)
+        logits,targets = dim2_3(logits, targets)
+        logits,targets = dim3_4(logits, targets, class_num)
         
         for class_index in range(targets.size()[0]):
             l_v = (logits[ class_index, :, :, :]).sum()
